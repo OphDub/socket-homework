@@ -6,7 +6,7 @@
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font: 13px Helvetica, Arial; }
       form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form input { border: 0; padding: 10px; width: 90%; margin: .5%; }
       form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
       #messages { list-style-type: none; margin: 0; padding: 0; }
       #messages li { padding: 5px 10px; }
@@ -14,11 +14,8 @@
     </style>
   </head>
   <body>
-    <article class="username-info">
-      <form action="submit">
-        <input type="text" class="user-name-input" placeholder="Your UserName">
-        <button type="submit" class="user-name-btn">Set Username</button>
-      </form>
+    <article class="user-info">
+      <button class="set-username-btn">Set Username</button>
     </article>
     <ul id="messages"></ul>
     <form action="">
@@ -26,6 +23,52 @@
     </form>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
-    <script src="/application.js"></script>
+    <script>
+    $(() => {
+      const socket = io();
+      $(document).on('ready', () => setUserName());
+      $(document).on('click', '.set-username-btn', () => setUserName());
+
+      const setUserName = () => {
+        const username = window.prompt('Please enter your username', 'e.g. Big O');
+        const newUserInfo = `
+          <h3 class="current-user-name">
+            Your Current Username:
+              <span class="user-name">
+                ${username}
+              </span>
+          </h3>
+          <button class="set-username-btn">Change Username</button>
+        `;
+
+        $('.user-info').empty();
+        $('.user-info').append(newUserInfo);
+        socket.emit('user name', $('.user-name').text());
+      };
+
+      $('form').submit(() => {
+        const user = $('.user-name').text();
+        const chat_msg = $('#m').val();
+        const msg = { user, chat_msg };
+        socket.emit('chat message', msg);
+        $('#m').val('');
+        return false;
+      });
+
+      socket.on('chat message', (msg) => {
+        const { user, chat_msg } = msg;
+        const message = `${user}:${chat_msg}`;
+        $('#messages').append($('<li>').text(message));
+      });
+
+      socket.on('user name', (user) => {
+        $('#messages').append($('<li>').text(`Welcome ${user} to the chat.`));
+      });
+
+      socket.on('disconnect', () => {
+        
+      });
+    });
+    </script>
   </body>
 </html>
