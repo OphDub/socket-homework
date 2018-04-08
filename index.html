@@ -17,8 +17,12 @@
     <article class="user-info">
       <button class="set-username-btn">Set Username</button>
     </article>
+    <article class="active-users">
+      <h3>Users in Chat:</h3>
+      <ul class="user-list"></ul>
+    </article>
     <ul id="messages"></ul>
-    <form action="">
+    <form action="" id="chat-form">
       <input id="m" autocomplete="off" /><button>Send</button>
     </form>
     <script src="/socket.io/socket.io.js"></script>
@@ -26,11 +30,9 @@
     <script>
     $(() => {
       const socket = io();
-      $(document).on('ready', () => setUserName());
       $(document).on('click', '.set-username-btn', () => setUserName());
 
-      const setUserName = () => {
-        const username = window.prompt('Please enter your username', 'e.g. Big O');
+      const setUserName = (username) => {
         const newUserInfo = `
           <h3 class="current-user-name">
             Your Current Username:
@@ -43,10 +45,13 @@
 
         $('.user-info').empty();
         $('.user-info').append(newUserInfo);
-        socket.emit('user name', $('.user-name').text());
       };
 
-      $('form').submit(() => {
+      const updateUserlist = () => {
+      };
+
+      $('#chat-form').submit((e) => {
+        e.preventDefault();
         const user = $('.user-name').text();
         const chat_msg = $('#m').val();
         const msg = { user, chat_msg };
@@ -55,18 +60,34 @@
         return false;
       });
 
+      socket.on('connect', () => {
+        const user = window.prompt('Please enter your username', 'e.g. Big O');
+
+        setUserName(user);
+        socket.emit('user joined', user);
+      });
+
       socket.on('chat message', (msg) => {
         const { user, chat_msg } = msg;
-        const message = `${user}:${chat_msg}`;
+        const message = `"${user}" says: ${chat_msg}`;
         $('#messages').append($('<li>').text(message));
       });
 
-      socket.on('user name', (user) => {
+      socket.on('user joined', (user) => {
         $('#messages').append($('<li>').text(`Welcome ${user} to the chat.`));
       });
 
-      socket.on('disconnect', () => {
-        
+      socket.on('user list', (users) => {
+        $('.user-list').empty();
+        const userNames = Object.keys(users);
+
+        userNames.forEach(user => {
+          $('.user-list').append($('<li>').text(user))
+        })
+      });
+
+      socket.on('sign off', (user) => {
+        $('#messages').append($('<li>').text(`${user} has left the chat.`));
       });
     });
     </script>

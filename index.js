@@ -1,24 +1,33 @@
 var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+let userList = {};
 
-app.get('/', function(req, res){
-  res.sendFile(__dirname + '/index.html');
+app.get('/', (request, response) => {
+  response.sendFile(__dirname + '/index.html');
 });
 
-io.on('connection', (socket) => {
-  console.log('a user connected');
+io.sockets.on('connection', (socket) => {
+  socket.on('user joined', (user) => {
+    socket.user = user;
+    userList[user] = user;
+
+    const serverWelcome = { user: 'SERVER', chat_msg: 'You have joined the chat room.'};
+
+    socket.emit('chat message', serverWelcome);
+    socket.broadcast.emit('user joined', user);
+
+    io.sockets.emit('user list', userList);
+  });
 
   socket.on('chat message', (msg) => {
     io.emit('chat message', msg);
   });
 
-  socket.on('user name', (username) => {
-    io.emit('user name', username);
-  });
-
   socket.on('disconnect', () => {
-    console.log('user disconnected');
+    delete userList[socket.user];
+    io.sockets.emit('user list', userList);
+    socket.broadcast.emit('sign off', socket.user);
   });
 });
 
